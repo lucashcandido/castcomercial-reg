@@ -12,7 +12,7 @@
 <link rel="apple-touch-icon" href="icon-180.png">
 <style>
 /* Registration for new customers, opened from the QR code. Nothing is stored here: the data goes
-   to the owners as a WhatsApp message with a link that loads it into Cast Comercial. */
+   to the owners as a WhatsApp message. */
 :root{--bg:#f3f4f7;--card:#fff;--text:#171a21;--muted:#667085;--line:#e2e5eb;--accent:#1d4ed8;--accent-soft:#e3ebff;--on-accent:#fff;--err:#c62828;--wa:#128c4a}
 @media (prefers-color-scheme: dark){:root{--bg:#0f1218;--card:#191d26;--text:#eef0f4;--muted:#98a2b3;--line:#2a303c;--accent:#6b93ff;--accent-soft:#1d2a4d;--on-accent:#0b1020;--err:#f87171;--wa:#3ecf7a}}
 *{box-sizing:border-box}
@@ -47,6 +47,8 @@ button{width:100%;font:inherit;font-size:18px;font-weight:700;padding:15px;borde
     <div class="field"><label class="l" for="n">Nombre y apellido</label><input id="n" type="text" autocomplete="name" autocapitalize="words" required></div>
     <div class="field"><label class="l" for="p">Teléfono (WhatsApp)</label><input id="p" type="tel" autocomplete="tel" inputmode="tel" placeholder="11 5555-0000" required></div>
     <div class="field"><label class="l" for="k">Patente</label><input id="k" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" style="text-transform:uppercase" placeholder="AB 123 CD" required></div>
+    <div class="field"><span class="l" style="display:block;font-weight:650;margin-bottom:6px">¿En qué estacionamiento?</span>
+      <div class="pay" role="radiogroup" id="lots"></div></div>
     <div class="field"><span class="l" style="display:block;font-weight:650;margin-bottom:6px">¿Cómo vas a pagar?</span>
       <div class="pay" role="radiogroup">
         <label><input type="radio" name="f" value="mp">Mercado Pago</label>
@@ -73,6 +75,9 @@ button{width:100%;font:inherit;font-size:18px;font-weight:700;padding:15px;borde
   var biz = (q.get('n') || 'Cast Comercial').trim().slice(0, 60);
   if(biz){ document.getElementById('title').textContent = 'Registro – ' + biz; document.title = 'Registro – ' + biz; }
   var $ = function(id){ return document.getElementById(id); };
+  /* the parking lots to choose from - change the names here */
+  var LOTS = ['Estacionamiento 1', 'Estacionamiento 2', 'Estacionamiento 3'];
+  $('lots').innerHTML = LOTS.map(function(n, i){ return '<label><input type="radio" name="lot" value="' + i + '">' + n.replace(/[<&>"]/g, '') + '</label>'; }).join('');
   var PAY = { mp:'Mercado Pago', cash:'Efectivo', transfer:'Transferencia bancaria' };
   function plate(v){
     var s = String(v || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -80,11 +85,6 @@ button{width:100%;font:inherit;font-size:18px;font-weight:700;padding:15px;borde
     if((m = /^([A-Z]{2})(\d{3})([A-Z]{2})$/.exec(s))) return m[1] + ' ' + m[2] + ' ' + m[3];
     if((m = /^([A-Z]{3})(\d{3})$/.exec(s))) return m[1] + ' ' + m[2];
     return s;
-  }
-  function b64url(obj){
-    var bytes = new TextEncoder().encode(JSON.stringify(obj)), bin = '';
-    for(var i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
-    return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
   }
   if(!to){ $('e').textContent = 'Este código no está completo (falta el número de WhatsApp). Pedí el código nuevo en el estacionamiento.'; }
   $('k').addEventListener('blur', function(){ this.value = plate(this.value); });
@@ -96,10 +96,11 @@ button{width:100%;font:inherit;font-size:18px;font-weight:700;padding:15px;borde
     if(n.length < 2) return fail('Escribí tu nombre.', 'n');
     if(p.replace(/\D/g, '').length < 6) return fail('Escribí tu número de teléfono.', 'p');
     if(k.replace(/\s/g, '').length < 5) return fail('Escribí la patente.', 'k');
+    var lot = document.querySelector('input[name=lot]:checked');
+    if(!lot) return fail('Elegí el estacionamiento.');
     if(!sel) return fail('Elegí cómo vas a pagar.');
     $('e').textContent = '';
-    var link = APP + '#alta=' + b64url({ v:1, n:n, p:p, k:k, f:sel.value, d:new Date().toISOString().slice(0, 10) });
-    var text = 'Hola, quiero registrarme en el estacionamiento.\n\nNombre: ' + n + '\nTeléfono: ' + p + '\nPatente: ' + k + '\nPago: ' + PAY[sel.value] + '\n\nPara cargar mis datos en la app: ' + link;
+    var text = 'Hola, quiero registrarme en el estacionamiento.\n\nNombre: ' + n + '\nTeléfono: ' + p + '\nPatente: ' + k + '\nEstacionamiento: ' + LOTS[+lot.value] + '\nPago: ' + PAY[sel.value];
     var url = 'https://wa.me/' + to + '?text=' + encodeURIComponent(text);
     $('again').href = url;
     $('f').hidden = true; $('lead').hidden = true; $('ok').hidden = false;
