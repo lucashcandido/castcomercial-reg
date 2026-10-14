@@ -77,7 +77,7 @@ button{width:100%;font:inherit;font-size:18px;font-weight:700;padding:15px;borde
   var $ = function(id){ return document.getElementById(id); };
   /* the parking lots to choose from - change the names here */
   var LOTS = (q.get('e') || '').split('|').map(function(x){ return x.replace(/\s+/g, ' ').trim().slice(0, 60); }).filter(Boolean).slice(0, 12);
-  if(!LOTS.length) LOTS = ['Estacionamiento 1', 'Estacionamiento 2', 'Estacionamiento 3'];     /* names come with the QR code from the app; these only if the address is typed by hand */
+  if(!LOTS.length) LOTS = ['Lope de Vega', 'Bolivia', 'Condarco'];        /* the three parking lots of Cast Comercial */
   $('lots').innerHTML = LOTS.map(function(n, i){ return '<label><input type="radio" name="lot" value="' + i + '">' + n.replace(/[<&>"]/g, '') + '</label>'; }).join('');
   if(LOTS.length === 1) document.querySelector('input[name=lot]').checked = true;
   var PAY = { mp:'Mercado Pago', cash:'Efectivo', transfer:'Transferencia bancaria' };
