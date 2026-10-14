@@ -27,6 +27,12 @@ label.l{display:block;font-weight:650;margin-bottom:6px}
 input[type=text],input[type=tel]{width:100%;font:inherit;font-size:18px;padding:13px 14px;border:1.5px solid var(--line);border-radius:12px;background:var(--card);color:var(--text)}
 input:focus{outline:none;border-color:var(--accent)}
 .pay{display:grid;gap:8px}
+.veh{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.veh label{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border:1.5px solid var(--line);border-radius:12px;padding:12px 6px;font-size:15px;font-weight:600;text-align:center;cursor:pointer;min-height:84px}
+.veh input{position:absolute;opacity:0;pointer-events:none}
+.veh .ic{font-size:28px;line-height:1}
+.veh label:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.veh label:has(input:focus-visible){outline:2px solid var(--accent)}
 .pay label{display:flex;align-items:center;gap:12px;border:1.5px solid var(--line);border-radius:12px;padding:14px;font-size:17px;font-weight:600;cursor:pointer}
 .pay input{width:22px;height:22px;accent-color:var(--accent);margin:0}
 .pay label:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
@@ -46,7 +52,14 @@ button{width:100%;font:inherit;font-size:18px;font-weight:700;padding:15px;borde
   <form class="card" id="f" novalidate>
     <div class="field"><label class="l" for="n">Nombre y apellido</label><input id="n" type="text" autocomplete="name" autocapitalize="words" required></div>
     <div class="field"><label class="l" for="p">Teléfono (WhatsApp)</label><input id="p" type="tel" autocomplete="tel" inputmode="tel" placeholder="11 5555-0000" required></div>
-    <div class="field"><label class="l" for="k">Patente</label><input id="k" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" style="text-transform:uppercase" placeholder="AB 123 CD" required></div>
+    <div class="field"><span class="l" style="display:block;font-weight:650;margin-bottom:6px">¿Qué vehículo tenés?</span>
+      <div class="veh" role="radiogroup">
+        <label><input type="radio" name="v" value="auto"><span class="ic" aria-hidden="true">🚗</span>Auto</label>
+        <label><input type="radio" name="v" value="moto"><span class="ic" aria-hidden="true">🏍️</span>Moto</label>
+        <label><input type="radio" name="v" value="camion"><span class="ic" aria-hidden="true">🚚</span>Camioneta / camión</label>
+        <label><input type="radio" name="v" value="bici"><span class="ic" aria-hidden="true">🚲</span>Bicicleta</label>
+      </div></div>
+    <div class="field" id="kf" hidden><label class="l" for="k">Patente</label><input id="k" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" style="text-transform:uppercase" placeholder="AB 123 CD" required></div>
     <div class="field"><span class="l" style="display:block;font-weight:650;margin-bottom:6px">¿En qué estacionamiento?</span>
       <div class="pay" role="radiogroup" id="lots"></div></div>
     <div class="field"><span class="l" style="display:block;font-weight:650;margin-bottom:6px">¿Cómo vas a pagar?</span>
@@ -86,10 +99,19 @@ button{width:100%;font:inherit;font-size:18px;font-weight:700;padding:15px;borde
     var m;
     if((m = /^([A-Z]{2})(\d{3})([A-Z]{2})$/.exec(s))) return m[1] + ' ' + m[2] + ' ' + m[3];
     if((m = /^([A-Z]{3})(\d{3})$/.exec(s))) return m[1] + ' ' + m[2];
+    if((m = /^([A-Z])(\d{3})([A-Z]{3})$/.exec(s))) return m[1] + m[2] + ' ' + m[3];       /* motorcycles: A123 BCD */
+    if((m = /^(\d{3})([A-Z]{3})$/.exec(s))) return m[1] + ' ' + m[2];                   /* older motorcycles: 123 ABC */
     return s;
   }
   if(!to){ $('e').textContent = 'Este código no está completo (falta el número de WhatsApp). Pedí el código nuevo en el estacionamiento.'; }
   $('k').addEventListener('blur', function(){ this.value = plate(this.value); });
+  var VEH = { auto:'Auto', moto:'Moto', camion:'Camioneta / camión', bici:'Bicicleta' };
+  var PH = { auto:'AB 123 CD', moto:'A123 BCD', camion:'AB 123 CD' };
+  Array.prototype.forEach.call(document.querySelectorAll('input[name=v]'), function(r){ r.addEventListener('change', function(){
+    var bici = r.value === 'bici';                      /* a bicycle has no plate */
+    $('kf').hidden = bici; $('k').placeholder = PH[r.value] || '';
+    if(!bici && !$('k').value) setTimeout(function(){ $('k').focus(); }, 50);
+  }); });
   $('f').addEventListener('submit', function(ev){
     ev.preventDefault();
     var n = $('n').value.replace(/\s+/g, ' ').trim(), p = $('p').value.trim(), k = plate($('k').value), sel = document.querySelector('input[name=f]:checked');
@@ -97,12 +119,14 @@ button{width:100%;font:inherit;font-size:18px;font-weight:700;padding:15px;borde
     if(!to) return fail('Este código no está completo (falta el número de WhatsApp).');
     if(n.length < 2) return fail('Escribí tu nombre.', 'n');
     if(p.replace(/\D/g, '').length < 6) return fail('Escribí tu número de teléfono.', 'p');
-    if(k.replace(/\s/g, '').length < 5) return fail('Escribí la patente.', 'k');
+    var veh = document.querySelector('input[name=v]:checked');
+    if(!veh) return fail('Elegí qué vehículo tenés.');
+    if(veh.value !== 'bici' && k.replace(/\s/g, '').length < 5) return fail('Escribí la patente.', 'k');
     var lot = document.querySelector('input[name=lot]:checked');
     if(!lot) return fail('Elegí el estacionamiento.');
     if(!sel) return fail('Elegí cómo vas a pagar.');
     $('e').textContent = '';
-    var text = 'Hola, quiero registrarme en el estacionamiento.\n\nNombre: ' + n + '\nTeléfono: ' + p + '\nPatente: ' + k + '\nEstacionamiento: ' + LOTS[+lot.value] + '\nPago: ' + PAY[sel.value];
+    var text = 'Hola, quiero registrarme en el estacionamiento.\n\nNombre: ' + n + '\nTeléfono: ' + p + '\nVehículo: ' + VEH[veh.value] + (veh.value === 'bici' ? '' : '\nPatente: ' + k) + '\nEstacionamiento: ' + LOTS[+lot.value] + '\nPago: ' + PAY[sel.value];
     var url = 'https://wa.me/' + to + '?text=' + encodeURIComponent(text);
     $('again').href = url;
     $('f').hidden = true; $('lead').hidden = true; $('ok').hidden = false;
